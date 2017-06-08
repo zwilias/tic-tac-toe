@@ -4,24 +4,30 @@ import Board exposing (..)
 import Html exposing (Html, beginnerProgram, div, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
-import TicTacToe as TTT exposing (Cross, Either(..), FinishedGame, Game, Move(..), Naught)
+import TicTacToe as TTT
+    exposing
+        ( Cross
+        , Either(..)
+        , Move(..)
+        , Naught
+        )
 
 
 type alias Game =
     Either (TTT.Game Cross Naught) (TTT.Game Naught Cross)
 
 
+type alias FinishedGame =
+    Either (TTT.FinishedGame Cross) (TTT.FinishedGame Naught)
+
+
 type alias Model =
-    { game : Game
-    , winner : Maybe String
-    }
+    Either Game FinishedGame
 
 
 initialModel : Model
 initialModel =
-    { game = Left TTT.init
-    , winner = Nothing
-    }
+    Left <| Left TTT.init
 
 
 type Msg
@@ -29,23 +35,28 @@ type Msg
 
 
 update : Msg -> Model -> Model
-update (Click position) ({ game } as model) =
-    case game of
+update (Click position) model =
+    case model of
         Left game ->
-            move position game Right model
+            case game of
+                Left game ->
+                    move position game Right Left
 
-        Right game ->
-            move position game Left model
+                Right game ->
+                    move position game Left Right
+
+        Right finishedGame ->
+            model
 
 
-move : Position -> TTT.Game a b -> (TTT.Game b a -> Game) -> Model -> Model
-move position game forModel model =
+move : Position -> TTT.Game a b -> (TTT.Game b a -> Game) -> (TTT.FinishedGame a -> FinishedGame) -> Model
+move position game asGame asFinished =
     case TTT.move position game of
-        Left new ->
-            { model | game = forModel new }
+        Left game ->
+            Left <| asGame game
 
         Right winner ->
-            { model | winner = Just <| toString winner }
+            Right <| asFinished winner
 
 
 board : Game -> Board Move
@@ -60,14 +71,35 @@ board either =
 
 view : Model -> Html Msg
 view model =
+    case model of
+        Left game ->
+            showBoard True <| board game
+
+        Right finished ->
+            case finished of
+                Left (TTT.Winner _ board) ->
+                    showDone "Crosses win!" board
+
+                Right (TTT.Winner _ board) ->
+                    showDone "Naughts win!" board
+
+                Left (TTT.Draw board) ->
+                    showDone "Draw..." board
+
+                Right (TTT.Draw board) ->
+                    showDone "Draw..." board
+
+
+showDone : String -> Board Move -> Html Msg
+showDone whoWon board =
     div []
-        [ showBoard <| board model.game
-        , text <| toString model.winner
+        [ showBoard False board
+        , Html.h1 [] [ text whoWon ]
         ]
 
 
-showBoard : Board Move -> Html Msg
-showBoard board =
+showBoard : Bool -> Board Move -> Html Msg
+showBoard withTrigger board =
     let
         showRow : Int -> List Move -> Html Msg
         showRow y cells =
@@ -85,9 +117,18 @@ showBoard board =
                 Empty ->
                     ""
 
+        trigger : Bool -> Int -> Int -> List (Html.Attribute Msg)
+        trigger isClickable x y =
+            if isClickable && withTrigger then
+                [ onClick <| Click { x = x, y = y } ]
+            else
+                []
+
         showCell : Int -> Int -> Move -> Html Msg
         showCell y x cell =
-            div [ class "cell", onClick <| Click { x = x, y = y } ] [ text <| cellString cell ]
+            div
+                ([ class "cell" ] ++ trigger (cell == Empty) x y)
+                [ text <| cellString cell ]
     in
     div [ class "table" ] (List.indexedMap showRow (rows board))
 

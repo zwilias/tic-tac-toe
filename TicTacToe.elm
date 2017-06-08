@@ -91,8 +91,7 @@ allSame list =
 
 hasComplete : (Board Move -> List (List Move)) -> Board Move -> Bool
 hasComplete f a =
-    f a
-        |> List.any (\l -> allSame l |> Debug.log (toString l))
+    f a |> List.any allSame
 
 
 isFull : Board Move -> Bool
@@ -103,9 +102,9 @@ isFull arr =
 markWinner : Game current next -> Maybe (FinishedGame current)
 markWinner (Game current _ { board }) =
     if
-        (hasComplete Board.rows board |> Debug.log "rows")
-            || (hasComplete Board.columns board |> Debug.log "cols")
-            || (hasComplete Board.diagonals board |> Debug.log "diag")
+        hasComplete Board.rows board
+            || hasComplete Board.columns board
+            || hasComplete Board.diagonals board
     then
         Just <| Winner current board
     else if isFull board then
