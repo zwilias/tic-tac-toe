@@ -26,28 +26,38 @@ toIndex { x, y } =
     x + 3 * y
 
 
+type alias Extractor =
+    Int -> Position
+
+
+extract : (Int -> Position) -> Array a -> Int -> Maybe a
+extract with from index =
+    Array.get (with index |> toIndex) from
+
+
+forAll : Extractor -> Array a -> List a
+forAll extractor arr =
+    List.range 0 2 |> List.filterMap (extract extractor arr)
+
+
 row : Int -> Board a -> List a
-row row arr =
-    List.range 0 2
-        |> List.filterMap (\x -> Array.get (toIndex { x = x, y = row }) arr)
+row row =
+    forAll (\x -> { x = x, y = row })
 
 
 column : Int -> Board a -> List a
-column col arr =
-    List.range 0 2
-        |> List.filterMap (\y -> Array.get (toIndex { x = col, y = y }) arr)
+column col =
+    forAll (\y -> { x = col, y = y })
 
 
 diagonal1 : Board a -> List a
-diagonal1 arr =
-    List.range 0 2
-        |> List.filterMap (\i -> Array.get (toIndex { x = i, y = i }) arr)
+diagonal1 =
+    forAll (\i -> { x = i, y = i })
 
 
 diagonal2 : Board a -> List a
-diagonal2 arr =
-    List.range 0 2
-        |> List.filterMap (\i -> Array.get (toIndex { x = i, y = 2 - i }) arr)
+diagonal2 =
+    forAll (\i -> { x = i, y = 2 - i })
 
 
 rows : Board a -> List (List a)
