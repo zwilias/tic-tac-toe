@@ -35,6 +35,11 @@ type Game current next
         }
 
 
+type FinishedGame winner
+    = Winner winner (Board Move)
+    | Draw (Board Move)
+
+
 type Cross
     = Cross
 
@@ -43,9 +48,27 @@ type Naught
     = Naught
 
 
-type FinishedGame winner
-    = Winner winner (Board Move)
-    | Draw (Board Move)
+init : Game Cross Naught
+init =
+    { board = Board.init Empty, move = crossMove, nextMove = naughtMove }
+        |> Game Cross Naught
+
+
+move :
+    Board.Position
+    -> Game current next
+    -> Either (Game next current) (FinishedGame current)
+move position game_ =
+    let
+        game =
+            applyMove position game_
+    in
+    case markWinner game of
+        Just done ->
+            Right <| done
+
+        Nothing ->
+            Left <| stepGame game
 
 
 board : Game a b -> Board Move
@@ -91,23 +114,6 @@ markWinner (Game current _ { board }) =
         Nothing
 
 
-move :
-    Board.Position
-    -> Game current next
-    -> Either (Game next current) (FinishedGame current)
-move position game_ =
-    let
-        game =
-            applyMove position game_
-    in
-    case markWinner game of
-        Just done ->
-            Right <| done
-
-        nothing ->
-            Left <| stepGame game
-
-
 crossMove : Cross -> Move
 crossMove _ =
     CrossMove
@@ -131,9 +137,3 @@ applyMove position (Game current next ({ move, board } as game)) =
             Board.set position (move current) board
     in
     { game | board = updatedBoard } |> Game current next
-
-
-init : Game Cross Naught
-init =
-    { board = Board.init Empty, move = crossMove, nextMove = naughtMove }
-        |> Game Cross Naught
