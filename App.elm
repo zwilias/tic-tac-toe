@@ -13,21 +13,24 @@ import TicTacToe as TTT
         )
 
 
-type alias Game =
-    Either (TTT.Game Cross Naught) (TTT.Game Naught Cross)
+type Game
+    = CrossMove (TTT.Game Cross Naught)
+    | NaughtMove (TTT.Game Naught Cross)
 
 
-type alias FinishedGame =
-    Either (TTT.FinishedGame Cross) (TTT.FinishedGame Naught)
+type FinishedGame
+    = CrossOrDraw (TTT.FinishedGame Cross)
+    | NaughtOrDraw (TTT.FinishedGame Naught)
 
 
-type alias Model =
-    Either Game FinishedGame
+type Model
+    = Ongoing Game
+    | Finished FinishedGame
 
 
 initialModel : Model
 initialModel =
-    Left <| Left TTT.init
+    Ongoing <| CrossMove TTT.init
 
 
 type Msg
@@ -37,15 +40,15 @@ type Msg
 update : Msg -> Model -> Model
 update (Click position) model =
     case model of
-        Left game ->
+        Ongoing game ->
             case game of
-                Left game ->
-                    move position game Right Left
+                CrossMove game ->
+                    move position game NaughtMove CrossOrDraw
 
-                Right game ->
-                    move position game Left Right
+                NaughtMove game ->
+                    move position game CrossMove NaughtOrDraw
 
-        Right finishedGame ->
+        Finished finishedGame ->
             model
 
 
@@ -53,40 +56,40 @@ move : Position -> TTT.Game a b -> (TTT.Game b a -> Game) -> (TTT.FinishedGame a
 move position game asGame asFinished =
     case TTT.move position game of
         Left game ->
-            Left <| asGame game
+            Ongoing <| asGame game
 
         Right winner ->
-            Right <| asFinished winner
+            Finished <| asFinished winner
 
 
 board : Game -> Board Move
 board either =
     case either of
-        Left game ->
+        NaughtMove game ->
             TTT.board game
 
-        Right game ->
+        CrossMove game ->
             TTT.board game
 
 
 view : Model -> Html Msg
 view model =
     case model of
-        Left game ->
+        Ongoing game ->
             showBoard True <| board game
 
-        Right finished ->
+        Finished finished ->
             case finished of
-                Left (TTT.Winner _ board) ->
+                CrossOrDraw (TTT.Winner _ board) ->
                     showDone "Crosses win!" board
 
-                Right (TTT.Winner _ board) ->
+                NaughtOrDraw (TTT.Winner _ board) ->
                     showDone "Naughts win!" board
 
-                Left (TTT.Draw board) ->
+                CrossOrDraw (TTT.Draw board) ->
                     showDone "Draw..." board
 
-                Right (TTT.Draw board) ->
+                NaughtOrDraw (TTT.Draw board) ->
                     showDone "Draw..." board
 
 
@@ -108,10 +111,10 @@ showBoard withTrigger board =
         cellString : Move -> String
         cellString move =
             case move of
-                CrossMove ->
+                TTT.CrossMove ->
                     "X"
 
-                NaughtMove ->
+                TTT.NaughtMove ->
                     "O"
 
                 Empty ->
