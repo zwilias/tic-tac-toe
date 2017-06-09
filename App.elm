@@ -1,13 +1,13 @@
 module App exposing (..)
 
 import Board exposing (..)
+import Either exposing (Either(..))
 import Html exposing (Html, beginnerProgram, div, text)
 import Html.Attributes exposing (class)
 import Html.Events exposing (onClick)
 import TicTacToe as TTT
     exposing
         ( Cross
-        , Either(..)
         , Move(..)
         , Naught
         )
@@ -34,7 +34,7 @@ initialModel =
 
 
 type Msg
-    = Click Position
+    = Click { x : Int, y : Int }
 
 
 update : Msg -> Model -> Model
@@ -43,23 +43,28 @@ update (Click position) model =
         Ongoing game ->
             case game of
                 CrossMove game ->
-                    move position game NaughtMove CrossOrDraw
+                    move position game CrossMove NaughtMove CrossOrDraw
 
                 NaughtMove game ->
-                    move position game CrossMove NaughtOrDraw
+                    move position game NaughtMove CrossMove NaughtOrDraw
 
         Finished finishedGame ->
             model
 
 
-move : Position -> TTT.Game a b -> (TTT.Game b a -> Game) -> (TTT.FinishedGame a -> FinishedGame) -> Model
-move position game asGame asFinished =
-    case TTT.move position game of
-        Left game ->
-            Ongoing <| asGame game
+move : { x : Int, y : Int } -> TTT.Game a b -> (TTT.Game a b -> Game) -> (TTT.Game b a -> Game) -> (TTT.FinishedGame a -> FinishedGame) -> Model
+move position game asUnchanged asGame asFinished =
+    case Board.cell position (TTT.board game) of
+        Left cell ->
+            case TTT.move cell game of
+                Left game ->
+                    Ongoing <| asGame game
 
-        Right winner ->
-            Finished <| asFinished winner
+                Right winner ->
+                    Finished <| asFinished winner
+
+        Right _ ->
+            Ongoing <| asUnchanged game
 
 
 board : Game -> Board Move
@@ -104,20 +109,20 @@ showDone whoWon board =
 showBoard : Bool -> Board Move -> Html Msg
 showBoard withTrigger board =
     let
-        showRow : Int -> List Move -> Html Msg
+        showRow : Int -> List (Maybe Move) -> Html Msg
         showRow y cells =
             div [ class "row" ] (List.indexedMap (showCell y) cells)
 
-        cellString : Move -> String
+        cellString : Maybe Move -> String
         cellString move =
             case move of
-                TTT.CrossMove ->
+                Just TTT.CrossMove ->
                     "X"
 
-                TTT.NaughtMove ->
+                Just TTT.NaughtMove ->
                     "O"
 
-                Empty ->
+                Nothing ->
                     ""
 
         trigger : Bool -> Int -> Int -> List (Html.Attribute Msg)
@@ -127,10 +132,10 @@ showBoard withTrigger board =
             else
                 []
 
-        showCell : Int -> Int -> Move -> Html Msg
+        showCell : Int -> Int -> Maybe Move -> Html Msg
         showCell y x cell =
             div
-                ([ class "cell" ] ++ trigger (cell == Empty) x y)
+                ([ class "cell" ] ++ trigger (cell == Nothing) x y)
                 [ text <| cellString cell ]
     in
     div [ class "table" ] (List.indexedMap showRow (rows board))

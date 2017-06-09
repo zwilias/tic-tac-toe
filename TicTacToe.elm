@@ -1,7 +1,6 @@
 module TicTacToe
     exposing
         ( Cross
-        , Either(..)
         , FinishedGame(..)
         , Game
         , Move(..)
@@ -12,17 +11,12 @@ module TicTacToe
         )
 
 import Board exposing (Board)
-
-
-type Either a b
-    = Left a
-    | Right b
+import Either exposing (Either(..))
 
 
 type Move
     = CrossMove
     | NaughtMove
-    | Empty
 
 
 type Game current next
@@ -50,12 +44,12 @@ type Naught
 
 init : Game Cross Naught
 init =
-    { board = Board.init Empty, move = crossMove, nextMove = naughtMove }
+    { board = Board.init, move = crossMove, nextMove = naughtMove }
         |> Game Cross Naught
 
 
 move :
-    Board.Position
+    Board.Cell Board.Free
     -> Game current next
     -> Either (Game next current) (FinishedGame current)
 move position game_ =
@@ -76,27 +70,27 @@ board (Game _ _ { board }) =
     board
 
 
-allSame : List Move -> Bool
+allSame : List (Maybe Move) -> Bool
 allSame list =
     case list of
         [] ->
             False
 
-        Empty :: xs ->
+        Nothing :: _ ->
             False
 
         x :: xs ->
             List.all ((==) x) xs
 
 
-hasComplete : (Board Move -> List (List Move)) -> Board Move -> Bool
+hasComplete : (Board Move -> List (List (Maybe Move))) -> Board Move -> Bool
 hasComplete f a =
     f a |> List.any allSame
 
 
 isFull : Board Move -> Bool
 isFull arr =
-    Board.toList arr |> List.all ((/=) Empty)
+    Board.toList arr |> List.all ((/=) Nothing)
 
 
 markWinner : Game current next -> Maybe (FinishedGame current)
@@ -129,7 +123,7 @@ stepGame (Game a b game) =
         |> Game b a
 
 
-applyMove : Board.Position -> Game a b -> Game a b
+applyMove : Board.Cell Board.Free -> Game a b -> Game a b
 applyMove position (Game current next ({ move, board } as game)) =
     let
         updatedBoard =
