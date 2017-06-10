@@ -52,7 +52,13 @@ update (Click position) model =
             model
 
 
-move : { x : Int, y : Int } -> TTT.Game a b -> (TTT.Game a b -> Game) -> (TTT.Game b a -> Game) -> (TTT.FinishedGame a -> FinishedGame) -> Model
+move :
+    { x : Int, y : Int }
+    -> TTT.Game a b
+    -> (TTT.Game a b -> Game)
+    -> (TTT.Game b a -> Game)
+    -> (TTT.FinishedGame a -> FinishedGame)
+    -> Model
 move position game asUnchanged asGame asFinished =
     case Board.cell position (TTT.board game) of
         Left cell ->
